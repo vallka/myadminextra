@@ -1,0 +1,13 @@
+Dear {firstname} {lastname},
+
+Thank you for your recent purchase from us. Would you mind to spend a few minutes to review your purchased products? 
+We will give 300 points (worth £3) for each product review!
+
+
+{products_text}
+
+Kind Regards,
+Customer Service
+GellifiQue® LTD
+
+{shop_url}

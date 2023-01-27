@@ -1,0 +1,24 @@
+
+[{shop_url}] 
+
+Hi {firstname} {lastname}, 
+
+We noticed that during your last visit on {shop_name}, you did not
+complete the order you had started.
+
+Your cart has been saved, you can resume your order by visiting our
+shop: {shop_name} [{shop_url}]
+
+We provide the following bulk discounts:
+
+- free shipping on orders over £50 (UK customers only)
+- £10 off on orders over £100 (all customers)
+- £20 off on orders over £150 (all customers)
+- £45 off on orders over £200 (UK customers only)
+
+All discounts apply automatically at the checkout by reducing the initial retail price and work in conjunction with each other.
+
+If you have any questions or require any assistance please don't hesitate to get in touch with us.
+
+
+{shop_name} [{shop_url}]

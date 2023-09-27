@@ -27,10 +27,10 @@ function get_products() {
   select 
   p.id_product
   ,name
-  ,COALESCE(meta_description,description,name) description
+  ,description_short as description
   ,concat('https://www.gellifique.co.uk/--',link_rewrite,'(',p.id_product,').html') link
   ,(select ean13 from ps17_product where id_product=p.id_product) gtin
-  ,(select reference from ps17_product where id_product=p.id_product) sku
+  ,(select reference from ps17_product where id_product=p.id_product) reference
   ,(select name from ps17_manufacturer where id_manufacturer=(select id_manufacturer from ps17_product where id_product=p.id_product)) brand
   from 
   ps17_product_shop p
@@ -71,10 +71,24 @@ $pp = get_products();
 $gtins = [];
 foreach ($pp as $p) {
     $p['name'] = mb_convert_case($p['name'],MB_CASE_TITLE);
+
+    $p['description'] = str_replace("<p>","\n",$p['description']);
+    $p['description'] = str_replace("<li>","\n",$p['description']);
+    $p['description'] = str_replace("<br>","\n",$p['description']);
+    $p['description'] = str_replace("<br/>","\n",$p['description']);
+    $p['description'] = str_replace("<br />","\n",$p['description']);
     $p['description'] = trim(strip_tags($p['description']));
-    $p['description'] = str_replace("\n"," ",$p['description']);
+
+    $p['description'] = str_replace("\n\n","\n",$p['description']);
+    $p['description'] = str_replace("\n",". ",$p['description']);
     $p['description'] = str_replace("\r","",$p['description']);
     $p['description'] = str_replace('"',"'",$p['description']);
+    
+    $p['description'] = substr($p['description'],0,500);
+
+    $p['SKU'] = sprintf('G%05d',$p['id_product']);
+    $p['MPN'] = sprintf('G%05d',$p['id_product']);
+    $p['subbrand'] = 'N/A';
     $gtins[$p['gtin']] = $p;
 }
 
@@ -91,8 +105,12 @@ header('Content-Disposition: attachment;filename=' . $fileName);
 
 $out = fopen('php://output', 'w');
 
+fputcsv($out, ['NumberType: GTIN-13']);
+fputcsv($out, ['Prefix: 506072630']);
+fputcsv($out, ['']);
+
 fputcsv($out, 
-    ['Number','Product Name','Description','Main Brand','Sub Brand','Product Link','MPN','SKU','Updated']
+    ['Number','Status','Product Name','Description','Main Brand','Sub Brand','Product Link','MPN','SKU','Updated']
 );
 
 
@@ -102,14 +120,15 @@ for ($i=0;$i<1000;++$i){
     $prod = $gtins[$gtin];
 
     $line[0] = $gtin;
-    $line[1] = $prod?$prod['name']:'';
-    $line[2] = $prod?$prod['description']:'';
-    $line[3] = $prod?$prod['brand']:'';
-    $line[4] = '';
-    $line[5] = $prod?$prod['link']:'';
-    $line[6] = '';
-    $line[7] = $prod?$prod['sku']:'';
-    $line[8] = '';
+    $line[1] = $prod?'Active':'';
+    $line[2] = $prod?$prod['name']:'';
+    $line[3] = $prod?$prod['description']:'';
+    $line[4] = $prod?$prod['brand']:'';
+    $line[5] = $prod?$prod['subbrand']:'';
+    $line[6] = $prod?$prod['link']:'';
+    $line[7] = $prod?$prod['MPN']:'';
+    $line[8] = $prod?$prod['SKU']:'';
+    $line[9] = '';
   
     fputcsv($out,$line);
   /* print ($line[0].' '.$line[7]."\n");*/

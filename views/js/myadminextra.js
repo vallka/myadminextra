@@ -53,12 +53,19 @@ function get_tracking_a(nu) {
         tracking_link = link;
     }
     else if (nu.match(/^\d{10}$/)) {
-        let link='https://www.dhl.co.uk/en/express/tracking.html?AWB=' + nu;
+        //let link='https://www.dhl.co.uk/en/express/tracking.html?AWB=' + nu;
+        let link='https://mydhl.express.dhl/gb/en/tracking.html#/results?id=' + nu;
         text = '<a href="'+link+'" target="_blank">' + nu + '</a>';
         tracking_link = link;
     }
     else if (nu.match(/^\d{16}$/)) {
         let link='https://new.myhermes.co.uk/track.html#/parcel/' + nu;
+        text = '<a href="'+link+'" target="_blank">' + nu + '</a>';
+        tracking_link = link;
+    }
+    else if (nu.match(/^\d{10}\&\w+$/)) {
+        let nua = nu.replace('&','&postcode=');
+        let link='https://apis.track.dpdlocal.co.uk/v1/track?parcel=' + nua;
         text = '<a href="'+link+'" target="_blank">' + nu + '</a>';
         tracking_link = link;
     }
@@ -88,6 +95,48 @@ function setup_orders_bulk_actions() {
         $('#order_grid .dropdown-menu').append(
             '<a class="dropdown-item" href="#" onclick="csv_for_dpd()">CSV for DPD</a>'
         );
+
+
+        var uploadButton = document.createElement('button');
+        uploadButton.id = 'uploadButton';
+        uploadButton.classList.add('btn');
+        uploadButton.classList.add('btn-outline-secondary');
+        uploadButton.innerHTML = 'Upload CSV file from DPD';
+
+        // Create the new file input element
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.width = '190';
+        fileInput.style.padding = '5px';
+        fileInput.id = 'fileInput';
+
+        // Get a reference to the existing button element
+        var bulkActionsButton = document.querySelector('.js-bulk-actions-btn');
+
+        // Insert the new elements after the existing button
+        bulkActionsButton.parentNode.insertBefore(uploadButton, bulkActionsButton.nextSibling);
+        bulkActionsButton.parentNode.insertBefore(fileInput, bulkActionsButton.nextSibling);
+
+        document.getElementById('uploadButton').addEventListener('click', function() {
+            var fileInput = document.getElementById('fileInput');
+            var file = fileInput.files[0];
+            var formData = new FormData();
+            formData.append('file', file);
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/modules/myadminextra/upload.php');
+            xhr.onload = function() {
+              if (xhr.status === 200) {
+                console.log(xhr.responseText);
+                alert('Uploaded. Please refresh the page to see updates');
+              }
+              else {
+                console.log(xhr);
+                alert('Error');
+              }
+            };
+            xhr.send(formData);
+        });
     }
 }
 
@@ -134,15 +183,41 @@ function get_dpd(ids='') {
             "service"
         ];
 
+        // Get today's date
+        var today = new Date();
+        // Get the next Tuesday
+        var nextTday=-1;
+        for (let i=0;i<7;++i) {
+            let dd=new Date(today.getTime()+86400000*i);
+            console.log(dd);
+            console.log(dd.getDay());
+            if (dd.getDay()==2) {
+                nextTday = dd;
+                break;
+            }
+            if (dd.getDay()==4) {
+                nextTday = dd;
+                break;
+            }
+        }
+
+        // Format the date to dd/mm/yyyy format
+        var dd = String(nextTday.getDate()).padStart(2, '0');
+        var mm = String(nextTday.getMonth() + 1).padStart(2, '0'); // January is 0!
+        var yyyy = nextTday.getFullYear();
+        var formattedDate = dd + '/' + mm + '/' + yyyy;
+
         let csv = '';
-        csv += 'Weight,Name,Company,Property,Street,Town,County,PostCode,Country,Telephone,Email,Reference,Service' + '\n';
+        csv += 'Weight,Name,Company,Property,Street,Town,County,PostCode,Country,Telephone,Email,Reference,Service,Shipment Date' + '\n';
 
         for(let i in data) {
             //console.log(titles[t]+'========='+data[i][titles[t]]);
-            let w = Math.ceil(parseFloat(data[i]["total_weight"])*10)/10;
+            let w = Math.max(1,Math.round(data[i]["total_weight"]));
             let service = '2^68';
-            if (w>1) service = '2^31';
+            if (w>=2) service = '2^31';
             if (w>5) service = '2^31';
+
+            dt = formattedDate;
 
             csv += '"' + w + '",';
             csv += '"' + data[i]["name_ship_to"] + '",';
@@ -155,8 +230,9 @@ function get_dpd(ids='') {
             csv += '"' + data[i]["country_code_ship_to"] + '",';
             csv += '"' + data[i]["phone_number_ship_to"] + '",';
             csv += '"' + data[i]["email_address_ship_to"] + '",';
-            csv += '"' + data[i]["shipment_reference"] + '",';
-            csv += '"' + service + '"';
+            csv += '"' + data[i]["id_order"] + '-' + data[i]["shipment_reference"]+ '",';
+            csv += '"' + service + '",';
+            csv += '"' + dt + '"';
 
             csv += '\n';
         }
@@ -728,6 +804,13 @@ function setup_bulk_update() {
 
     if ($('#bulk_update_modal').length==0) {
         $('body').append(html);
+        if (localStorage.getItem('product-bulk-what'))
+            document.getElementById('bulk-what').selectedIndex=localStorage.getItem('product-bulk-what');
+        if (localStorage.getItem('product-bulk-search'))
+            document.getElementById('bulk-search').value=localStorage.getItem('product-bulk-search');
+        if (localStorage.getItem('product-bulk-replace'))
+            document.getElementById('bulk-replace').value=localStorage.getItem('product-bulk-replace');
+
         var closable = true;
         $('#bulk_update_modal').modal({
             backdrop: (closable ? true : 'static'),
@@ -750,6 +833,9 @@ function setup_bulk_update() {
         });
 
         $('#bulk_update_modal .btn-primary').click(function(){
+            localStorage.setItem('product-bulk-what', document.getElementById('bulk-what').selectedIndex);
+            localStorage.setItem('product-bulk-search', document.getElementById('bulk-search').value);
+            localStorage.setItem('product-bulk-replace', document.getElementById('bulk-replace').value);
             do_bulk_update();
 
         });
@@ -832,7 +918,7 @@ function setup_product_list() {
             host = 'test.gellifique.co.uk';
         }
 
-        let url = 'https://'+token+'@'+host+'/api/products/?output_format=JSON&display=[id,name]&filter[id]=['+ids.join('|')+']';
+        let url = 'https://'+host+'/api/products/?ws_key='+token+'&output_format=JSON&display=[id,name]&filter[id]=['+ids.join('|')+']';
         console.log(url);
         $.ajax({
             method: "get",
@@ -885,7 +971,7 @@ async function setup_order_list() {
             host = 'test.gellifique.co.uk';
         }
 
-        let url = 'https://'+token+'@'+host+'/api/orders/?output_format=JSON&display=[id,shipping_number,id_address_delivery]&filter[id]=['+ids.join('|')+']';
+        let url = 'https://'+host+'/api/orders/?ws_key='+token+'&output_format=JSON&display=[id,shipping_number,id_address_delivery]&filter[id]=['+ids.join('|')+']';
         //console.log(url);
 
         ids = [];
@@ -915,7 +1001,7 @@ async function setup_order_list() {
         }});
         //console.log('more')
         //console.log(ids)
-        url = 'https://'+token+'@'+host+'/api/addresses/?output_format=JSON&display=[id,postcode,firstname,lastname]&filter[id]=['+ids.join('|')+']';
+        url = 'https://'+host+'/api/addresses/?ws_key='+token+'&output_format=JSON&display=[id,postcode,firstname,lastname]&filter[id]=['+ids.join('|')+']';
         //console.log(url);
         await $.ajax({
             method: "get",
@@ -943,6 +1029,22 @@ async function setup_order_list() {
       
         }});
 
+    }
+
+    const table = document.getElementById('order_grid_table');
+
+    if (table) {
+        table.addEventListener('click', function(event) {
+        if (event.target.classList.contains('column-reference')) {
+            const text = event.target.textContent.trim();
+            navigator.clipboard.writeText(text)
+            .then(() => console.log('Copying text was successful'))
+            .catch(err => console.log('Copying text failed:', err));
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        }, { capture: true });
     }
 }
 
@@ -1105,3 +1207,5 @@ function setup_transcopy_actions() {
         }
     }
 }
+
+

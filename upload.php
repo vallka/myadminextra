@@ -47,15 +47,24 @@ foreach ($resultArray as $record) {
 
     $order = '';        
     $delivered = false;
+    $voided = false;
     if ($file_type=='shipment') {
-        $tracking = str_replace(' ', '',"{$record[2]}&{$record[4]}");
+        if ($record[5]=='RoyalMail') {
+            $tracking = $record[2];
+        }
+        else {
+            $tracking = str_replace(' ', '',"{$record[2]}&{$record[4]}");
+        }
         $order = $record[0];
+        $voided = ($record[8]=='Y');
+        $printed = ($record[9]=='Y');
     }
     else {
         $con = preg_replace('/\/.*$/','',$record[6]);
         $tracking = str_replace(' ', '',"{$con}&{$record[8]}");
         $order = $record[1];
-        $delivered = preg_match('/^(Delivered)|(Picked up)/i',$record[5]);
+        
+        $delivered = preg_match('/^(Delivered)|(Picked up)/i',$record[5]) and !preg_match('/^(Delivered to requested DPD Pickup Shop)/i',$record[5]);
     }
     print ($order);        
 
@@ -115,7 +124,10 @@ foreach ($resultArray as $record) {
 
         print_r($result);
 
-        if ($result[0]['shipping_number']!=$tracking) {
+        if (!$result[0]['shipping_number'] and  $result[0]['shipping_number']!=$tracking
+                and ($file_type=='delivery' and $delivered or $file_type=='shipment' and $printed and !$voided)
+            ) 
+        {
             $dbret= $db->execute("UPDATE ". _DB_PREFIX_ . "orders SET shipping_number='".pSQL($tracking)."'".
             " WHERE id_order=".(int)$id );
     
@@ -123,9 +135,11 @@ foreach ($resultArray as $record) {
             " WHERE id_order=".(int)$id );
         }
         if ($file_type=='delivery' and $delivered and $result[0]['current_state']!=5) {
-            $dbret= $db->execute("UPDATE ". _DB_PREFIX_ . "orders SET current_state=5 WHERE id_order=".(int)$id );
+          if (!$result[0]['shipping_number'] or  $result[0]['shipping_number']==$tracking) {
+              $dbret= $db->execute("UPDATE ". _DB_PREFIX_ . "orders SET current_state=5 WHERE id_order=".(int)$id );
 
-            $dbret= $db->execute("insert into ps17_order_history (id_employee,id_order,id_order_state,date_add) values (0,".(int)$id.",5,now())");
+              $dbret= $db->execute("insert into ps17_order_history (id_employee,id_order,id_order_state,date_add) values (0,".(int)$id.",5,now())");
+          }
         }
 
 

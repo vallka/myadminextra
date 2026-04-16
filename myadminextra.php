@@ -36,7 +36,7 @@ class Myadminextra extends Module
     {
         $this->name = 'myadminextra';
         $this->tab = 'administration';
-        $this->version = '0.1.33';
+        $this->version = '0.1.7.1';
         $this->author = 'vallka';
         $this->need_instance = 0;
 
@@ -225,13 +225,21 @@ class Myadminextra extends Module
     */
     public function hookBackOfficeHeader()
     {
-        $this->context->controller->addJS($this->_path.'views/js/myadminextra.js?' . $this->version);
+        $this->context->controller->addJS($this->_path.'views/js/myadminextra.js?' . $this->version . Configuration::get('MYADMINEXTRA_JS_TS', 1));
+        //$this->context->controller->addCSS($this->_path.'views/css/myadminextra.css?' . $this->version . Configuration::get('MYADMINEXTRA_CSS_TS', 1));
         $this->context->controller->addCSS($this->_path.'views/css/myadminextra.css');
 
         /*if (Tools::getValue('module_name') == $this->name) {
             $this->context->controller->addJS($this->_path.'views/js/back.js');
             $this->context->controller->addCSS($this->_path.'views/css/back.css');
         }*/
+
+        return <<<EOD
+<script>
+var myadminextra_param = {$this->context->employee->id};
+</script>
+
+EOD;
     }
 
     public function hookDisplayBackOfficeFooter()

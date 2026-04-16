@@ -42,3 +42,11 @@
 .preview-toggle .material-icons {
     line-height: 0;
 }
+
+.adminorders .cellProductName .productSupplierReference {
+    display: none;
+}
+
+.adminproducts #supplier_combination_collection, .adminproducts #supplier_collection {
+    display: none;
+}

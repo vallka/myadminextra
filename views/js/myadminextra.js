@@ -5,6 +5,22 @@
     var old_window_onload = window.onload;
 var tracking_link = '';
 
+// Special UK postcodes — orders from these areas get a badge-warning on the postcode
+const SPECIAL_POSTCODES = [
+    /^BT/i,   // Northern Ireland
+    /^IM/i,   // Isle of Man
+    /^GY/i,   // Guernsey
+    /^JE/i,   // Jersey
+    /^IV/i,   // Inverness
+    /^KW/i,   // Kirkwall
+    /^PO(3[0-9]|4[01])/i,   // Isle of Wight PO30-PO41
+    /^PA(20|21|34|37|38|41|42|60|61|62|63|64|65|66|67|68|69)/i,   // Islay PA20-PA69, Oban PA34, Tobermory PA37-PA38, Campbeltown PA41-PA42, Jura PA60-PA69
+    /^PA(75|76|77|78|79|80|81|82|83|84|85|86|87|88|89)/i,   // Outer Hebrides PA75-PA99
+    /^TR(21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39)/i,   // Isles of Scilly TR21-TR39
+    /^ZE/i,    // Shetland ZE1-ZE3
+    /^PH(33|34|42|43|44)/i,   // Fort William etc.
+];
+
 window.onload = function(e){ 
     // just in case
     if (old_window_onload)
@@ -1146,7 +1162,7 @@ async function setup_order_list() {
                     tr.attr('data-address-id',order['id_address_delivery'])
                     tr.attr('data-carrier-id',order['id_carrier'])
 
-                    td = tr.find('td[class*="column-total_paid_tax_incl"]').append(' £'+parseFloat(order['total_shipping']).toFixed(2));
+                    //td = tr.find('td[class*="column-total_paid_tax_incl"]').append(' £'+parseFloat(order['total_shipping']).toFixed(2));
             
                   }
               }
@@ -1170,10 +1186,18 @@ async function setup_order_list() {
                     //console.log(addr)
                     let tr = $('#order_grid_table tbody tr[data-address-id='+addr['id']+']');
                     let td = tr.find('td[class*="column-country_name"]');
-                    if (td.text().match(/United Kingdom/)) {
+                    const isUK = td.text().match(/United Kingdom/);
+                    if (isUK) {
                         td.text('UK')
                     }
-                    td.append('<br>'+addr['postcode'])
+                    const isSpecialPostcode = SPECIAL_POSTCODES.some(re => re.test(addr['postcode']));
+                    const postcodeHtml = isSpecialPostcode
+                        ? '<span class="badge badge-warning rounded" style="font-size:100%">'+addr['postcode']+'</span>'
+                        : addr['postcode'];
+                    td.append('<br>'+postcodeHtml)
+                    if (!isUK) {
+                        td.html('<span class="badge badge-info rounded" style="font-size:100%">'+td.html()+'</span>')
+                    }
                     td.attr('data-name',addr['firstname']+' '+addr['lastname']);
                     td.attr('data-company',addr['company']);
                     td.attr('data-address',addr['address1']+' '+addr['address2']+' '+addr['city']);

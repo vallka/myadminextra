@@ -1,3 +1,7 @@
+// ============================================================
+// SECTION: Globals
+// ============================================================
+
     var old_window_onload = window.onload;
 var tracking_link = '';
 
@@ -21,8 +25,6 @@ window.onload = function(e){
     setup_tracking_info_bo()
     setup_bulk_actions()
     setup_orders_bulk_actions()
-    //setup_hermes_actions()
-    //setup_ups_button()
     setup_dhl_button()
     setup_add_order_by_barcode()
 
@@ -37,6 +39,10 @@ window.onload = function(e){
     setup_order_in_stock();
     setup_product_reorder();
 }
+
+// ============================================================
+// SECTION: Customer
+// ============================================================
 
 async function setup_customer() {
     console.log('setup_customer-1');
@@ -132,6 +138,10 @@ async function setup_customer() {
 
 }
 
+// ============================================================
+// SECTION: Tracking
+// ============================================================
+
 function get_tracking_a(txt) {
     nu = txt ? txt.replaceAll(' ','') : '';
     if (nu.match(/^P2G\d+$/i)) {
@@ -204,6 +214,10 @@ function setup_tracking_info_bo() {
         }
     }
 }
+
+// ============================================================
+// SECTION: Orders — bulk actions (DPD CSV, delivery slips, upload)
+// ============================================================
 
 function setup_orders_bulk_actions() {
     if ($('#order_grid .dropdown-menu').length>0) {
@@ -386,6 +400,10 @@ function get_dpd(ids='') {
 }
 
 
+// ============================================================
+// SECTION: Products — bulk actions (bulk update, DYMO labels, SQL query)
+// ============================================================
+
 function setup_bulk_actions() {
     if ($('#product_bulk_menu').length>0) {
         setup_bulk_update();
@@ -408,11 +426,6 @@ function setup_bulk_actions() {
  
  
 
-        $('.dropdown.bulk-catalog .dropdown-menu').append(
-            '<a class="dropdown-item" href="#" onclick="get_hermes()"><i class="material-icons">content_copy</i>Show JSON</a>'
-        );
-        $('.dropdown.bulk-catalog .dropdown-menu').append('<div class="dropdown-divider"></div>')
-  
     }
 
 }
@@ -535,7 +548,9 @@ function do_bulk_update() {
     }});
 }
 
-var qqq;
+// ============================================================
+// SECTION: Utilities
+// ============================================================
 
 function showLastSqlQueryIds(ids=null) {
     var sql = $('tbody[last_sql]').attr('last_sql');
@@ -568,85 +583,9 @@ function downloadFile(data, fileName, type="text/plain") {
     document.body.removeChild(a);
 }
 
-function downloadPDFFromFile(href, fileName, type="application/pdf") {
-    // Create an invisible A element
-    const a = document.createElement("a");
-    a.style.display = "none";
-    document.body.appendChild(a);
-  
-    a.href = href;
-    a.target = '_blank';
-  
-    // Use download attribute to set set desired file name
-    a.setAttribute("download", fileName);
-  
-    // Trigger the download by simulating click
-    a.click();
-  
-    // Cleanup
-    window.URL.revokeObjectURL(a.href);
-    document.body.removeChild(a);
-}
-
-
-function get_hermes() {
-    const url = 'https://www.gellifique.co.uk/apipy/hermes/';
-
-    $.getJSON(url,function(data) {
-        //console.log(data)
-        let titles=[
-            "Address_line_1",
-            "Address_line_2",
-            "Address_line_3",
-            "Address_line_4",
-            "Postcode",
-            "First_name",
-            "Last_name",
-            "Email",
-            "Weight",
-            "Compensation",
-            "Signature",
-            "Reference",
-            "Contents",
-            "Parcel_value",
-            "Delivery_phone",
-            "Delivery_safe_place",
-            "Delivery_instructions",
-            "Service"
-        ];
-
-
-        let csv = titles.join(',');
-        //console.log(csv)
-
-        csv += ',\n';
-
-        for(let i in data) {
-            for(let t in titles) {
-                //console.log(titles[t]+'========='+data[i][titles[t]]);
-                csv += '"' + data[i][titles[t]] + '",';
-            }
-            csv += '\n';
-        }
-        //console.log(csv)
-        
-        downloadFile(csv,'hermes-'+$.datepicker.formatDate( "yymmdd", new Date())+'.csv','text/csv')
-
-    });
-
-}
-
-function setup_hermes_actions() {
-    if ($('body.adminorders').length>0) {
-        if ($('span.panel-heading-action #desc-order-new').length>0) {
-            $('span.panel-heading-action').prepend(
-'<a class="list-toolbar-btn" style="width:55px;padding:14px 5px;" href="javascript:get_hermes();">'+
-'<span title="" data-toggle="tooltip" class="label-tooltip" data-original-title="Download CSV for Hermes" data-html="true" data-placement="top">'+
-'HERMES</span></a>')
-
-        }
-    }
-}
+// ============================================================
+// SECTION: Carriers — DHL
+// ============================================================
 
 function get_dhl(ho=0,id=0) {
     let url = 'https://app.gellifique.co.uk/api/v1/dhl/list/';
@@ -754,109 +693,6 @@ function setup_dhl_button() {
         })
 
     }
-}
-
-var ups_error=null;
-
-function setup_ups_button() {
-    if ($('body.adminorders').length>0 && $('#update_order_status_action_btn').length>0) {
-        $('#update_order_status_action_btn').parent().append('&nbsp;<span class="btn btn-default"><select id="select-ups"><option>UPS</option><option>Ship Package</option><option>Print Label</option></select></span>')
-        if (tracking_link) {
-            $('#select-ups').append('<option>Track</option>');
-        }
-
-        const id_order = $('#order-view-page').attr('data-order-title').match(/(\d+)/)[0];
-
-        $('#select-ups').change(function(){
-            if ($('#select-ups').val()=='Ship Package') {
-                if (confirm("Ship this order?")) {
-   		            ups_error=null;
-                    do_ups(id_order)
-                    if (!ups_error) {
-                        if (confirm("Print label?"+" https://app.gellifique.co.uk/media/UPS/"+id_order+".pdf")) {
-                            //console.log("https://dev.gellifique.co.uk/pyadmin734r04xdw/media/UPS/"+id_order+".pdf")
-                            downloadPDFFromFile("https://app.gellifique.co.uk/media/UPS/"+id_order+".pdf", "UPS-"+id_order)
-                        }
-                    }
-                }
-            }
-            else if ($('#select-ups').val()=='Print Label') {
-		        ups_error=null;
-                do_ups_label(id_order)
-                if (!ups_error) {
-                  //downloadPDFFromFile("https://dev.gellifique.co.uk/pyadmin734r04xdw/media/UPS/"+id_order+".pdf", "UPS-"+id_order)
-                  downloadPDFFromFile("https://app.gellifique.co.uk/media/UPS/"+id_order+".pdf", "UPS-"+id_order)
-                }
-            }
-            else if ($('#select-ups').val()=='Track' && tracking_link) {
-                window.open(tracking_link, '_blank');
-            }
-            $('#select-ups').get(0).selectedIndex=0;
-        });
-    }
-}
-
-function do_ups(id_order) {
-    console.log('ajax')
-    //let url = 'https://dev.gellifique.co.uk/pyadmin734r04xdw/api/v1/dhl/ups/action/';
-    let url = 'https://app.gellifique.co.uk/api/v1/ups/action/';
-    $.ajax({
-      method: "post",
-      async: false,
-      data: {"id_order": id_order},  
-      dataType: "json",
-      url: url,
-      headers: {"Authorization": "Token 6b246cc18769c6ec02dc20009649d5ae5903d454"},
-      success: function(data) {
-        console.log(data)
-        if (data['status']=='Error') {
-          alert('Error: '+data['message'])
-          ups_error = data['message']
-        }
-        else {
-          console.log(data["data"]["ShipmentResponse"]["ShipmentResults"]["NegotiatedRateCharges"]["TotalChargesWithTaxes"]["MonetaryValue"])
-
-          let sn = data["data"]["ShipmentResponse"]["ShipmentResults"]["ShipmentIdentificationNumber"]
-          let price = data["data"]["ShipmentResponse"]["ShipmentResults"]["NegotiatedRateCharges"]["TotalChargesWithTaxes"]["MonetaryValue"]
-
-          alert("Shipment "+sn+" successfully created. Total price is £"+price)
-        }
-      },
-      error: function(data) {
-        console.log('ERROR')
-        console.log(data)
-        alert('ERROR')
-        ups_error = 'ERROR'
-      }
-   });
-
-}
-
-function do_ups_label(id_order) {
-    console.log('ajax')
-    //let url = 'https://dev.gellifique.co.uk/pyadmin734r04xdw/api/v1/dhl/ups/label/';
-    let url = 'https://app.gellifique.co.uk/api/v1/ups/label/';
-    $.ajax({
-      method: "post",
-      async: false,
-      data: {"id_order": id_order},  
-      dataType: "json",
-      url: url,
-      headers: {"Authorization": "Token 6b246cc18769c6ec02dc20009649d5ae5903d454"},
-      success: function(data) {
-        console.log(data)
-        if (data['status']=='Error') {
-          alert('Error: '+data['message'])
-          ups_error = data['message']
-        }
-        else {
-          console.log(data["data"]["LabelRecoveryResponse"]["LabelResults"])
-          //let sn = data["data"]["LabelRecoveryResponse"]["LabelResults"]["ShipmentIdentificationNumber"]
-          //alert("Shipment "+sn+" successfully retrieved.")
-        }
-
-    }});
-
 }
 
 
@@ -1005,6 +841,10 @@ function process_barcode(code) {
     }, 1000);
 
 }
+// ============================================================
+// SECTION: Barcode scanning (order creation)
+// ============================================================
+
 var code='';
 function setup_add_order_by_barcode() {
     if ($('body.adminorders').length>0 && $('#order-creation-container').length>0) {
@@ -1041,6 +881,10 @@ function setup_add_order_by_barcode() {
 
     }
 }
+
+// ============================================================
+// SECTION: Product list enrichment
+// ============================================================
 
 async function setup_product_list() {
     if ($('#product_catalog_list table.product').length>0) {
@@ -1223,6 +1067,10 @@ async function setup_product_list() {
 
     }
 }
+
+// ============================================================
+// SECTION: Order list enrichment
+// ============================================================
 
 async function setup_order_list() {
     if ($('#order_grid_table').length>0) {
@@ -1434,6 +1282,10 @@ async function setup_order_list() {
     */
 }
 
+// ============================================================
+// SECTION: Transcopy (copy product/category data from UK to EU)
+// ============================================================
+
 var transcopy_data=null;
 
 function setup_transcopy_actions() {
@@ -1594,6 +1446,10 @@ function setup_transcopy_actions() {
     }
 }
 
+// ============================================================
+// SECTION: Product notes
+// ============================================================
+
 function setup_productnotes_actions() {
     console.log('setup_productnotes_actions')
     let need_button = '';
@@ -1750,6 +1606,10 @@ function setup_productnotes_actions() {
     }
 }
 
+// ============================================================
+// SECTION: Product reorder
+// ============================================================
+
 function setup_product_reorder() {
     console.log('setup_product_reorder')
     if ($('#product_catalog_list table.product').length>0) {
@@ -1813,6 +1673,10 @@ function setup_product_reorder() {
     }
 }
 
+// ============================================================
+// SECTION: Product page actions (toolbar buttons)
+// ============================================================
+
 function setup_product_actions() {
     const js_tocken = admin_modules_link.match(/_token=(\w*)/)[1];
     console.log('setup_product_actions '+js_tocken);
@@ -1825,6 +1689,10 @@ function setup_product_actions() {
             '" class="toolbar-button"><i class="material-icons")>assessment</i><span class="title">Orders</span></a>');    
     }
 }
+
+// ============================================================
+// SECTION: Product pack info & sets
+// ============================================================
 
 async function setup_product_pack_info() {
     console.log('setup_product_pack_info')
@@ -1919,6 +1787,10 @@ async function setup_product_pack_info() {
         }
     }
 }
+
+// ============================================================
+// SECTION: Order — in-stock status
+// ============================================================
 
 async function setup_order_in_stock() {
     console.log('setup_order_in_stock');

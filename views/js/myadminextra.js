@@ -16,7 +16,7 @@ const SPECIAL_POSTCODES = [
     /^PO(3[0-9]|4[01])/i,   // Isle of Wight PO30-PO41
     /^PA(20|21|34|37|38|41|42|60|61|62|63|64|65|66|67|68|69)/i,   // Islay PA20-PA69, Oban PA34, Tobermory PA37-PA38, Campbeltown PA41-PA42, Jura PA60-PA69
     /^PA(75|76|77|78|79|80|81|82|83|84|85|86|87|88|89)/i,   // Outer Hebrides PA75-PA99
-    /^TR(21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39)/i,   // Isles of Scilly TR21-TR39
+    /^TR(21|22|23|24|25)/i,   // Isles of Scilly TR21-TR25
     /^ZE/i,    // Shetland ZE1-ZE3
     /^PH(33|34|42|43|44)/i,   // Fort William etc.
 ];
@@ -142,6 +142,9 @@ async function setup_customer() {
                             instagram = 'https://www.instagram.com/'+instagram;
                         }
                         $('#viewFullDetails').append('<br><a target="_blank" href="'+instagram+'/">View Instagram</a>');
+                    }
+                    if (data[0]['orders_in_processing'] && parseInt(data[0]['orders_in_processing']) > 1) {
+                        $('#validatedOrders').find('p').eq(1).append(' <span style="font-size:100%" class="badge rounded badge-warning">'+data[0]['orders_in_processing']+'</span>');
                     }
                 }
             }
@@ -1285,6 +1288,26 @@ async function setup_order_list() {
                   }
               }
         }});
+        url =  '/modules/custom_reporting/view.php?output_format=json&id=21';
+        await $.ajax({
+            method: "get",
+            async: false,
+            dataType: "json",
+            url: url,
+            success: function(data) {
+              //console.log(data)
+              if (data && data.length>0) {
+                for(let i=0;i<data.length;++i) {
+                    let cust_id = data[i]['id_customer'];
+
+                    let tr = $('#order_grid_table tbody tr[data-customer-id='+cust_id+']');
+                    let td = tr.find('td[class*="column-customer"]');
+                    td.append(' <span class="td-error-value">('+data[i]['orders_in_processing']+')</span>')
+                    
+                }
+              }
+        }});
+
 
     }
 

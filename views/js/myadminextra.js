@@ -386,9 +386,9 @@ function get_dpd(ids='') {
         for(let i in data) {
             //console.log(titles[t]+'========='+data[i][titles[t]]);
             let w = Math.max(1,Math.round(data[i]["total_weight"]));
-            let service = '2^68';
-            if (w>=2) service = '2^31';
-            if (w>5) service = '2^31';
+            let service = '2^68';        //EXPRESSPAK 1 Next Day
+            if (w>=2) service = '2^32';  //EXPRESSPAK 5 Next Day
+            if (w>5) service = '2^12';   //PARCEL Next Day
 
             dt = formattedDate;
 
